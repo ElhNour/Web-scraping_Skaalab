@@ -123,17 +123,17 @@ async function getJobDetails (url, page, idStartup, id) {
 
 };
 
-async function getJobsLinks (url) {
+async function getJobsLinks (page,url) {
 
-  const browser = await puppeteer.launch({headless:false});
-  const page = await browser.newPage();
+  /*const browser = await puppeteer.launch({headless:false});
+  const page = await browser.newPage();*/
 
 // await page.setDefaultNavigationTimeout(0);
  //await page.waitForTimeout(4000);
   await page.goto(url);
 
  const hrefs = await page.$$eval('.gc3qm0-1.elzqlN div article header a', as => as.map(a => a.href)); 
- await browser.close();
+ //await browser.close();
  //console.log(hrefs);
  return hrefs;
 
@@ -155,37 +155,49 @@ async function getAlllinks () {
     try{
     const page = await browser.newPage();
     await page.setDefaultNavigationTimeout(0);
+
     /* navigate to jobs section */
-    await page.goto("https://www.welcometothejungle.com/fr/jobs");
-    await page.waitForTimeout(2000);
-    await page.click('.sc-AxjAm.sc-pscky.dyWQkt .ais-InstantSearch__root .sc-AxjAm.sc-pscky.btewui .sc-AxjAm.sc-pscky.cZkcda a');
-
-    /* get all the listed jobs */
+    await page.goto("https://www.welcometothejungle.com/fr/jobs?page=1&aroundQuery=&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Logiciels&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=SaaS%20%2F%20Cloud%20Services&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Application%20mobile&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Big%20Data&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Objets%20connect%C3%A9s&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Intelligence%20artificielle%20%2F%20Machine%20Learning&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Cybers%C3%A9curit%C3%A9&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Robotique&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Blockchain");
     await page.waitForTimeout(2500);
-    const hrefs = await page.$$eval('.dEWSJX li .biFsNh .cdtiMi .eqqpZQ a', as => as.map(a => a.href));
+  
+    /* get all the listed jobs */
+    var hrefs = await page.$$eval('.dEWSJX li .biFsNh .cdtiMi .eqqpZQ a', as => as.map(a => a.href));
     //console.log(hrefs);
+    var num=1;// page number
 
-    let links=[];
+    /* browse all pages */
+    while (hrefs.length!=0){
+     
     let startupLinksSet = new Set();
+    var j=0;
     for (let i=0;i<hrefs.length;i++){
          /*visit the job offers of each startup */
         await page.goto(hrefs[i]);
         await page.click('.sc-AxjAm.sc-11unfkk-2.bcntHX .sc-12bzhsi-7.lnDffK');
-        const jobslink = page.url() + '/jobs';
-        var object ={
-          id : i,
-          jobslink: jobslink
-        }
-        links.push(object);
-
-       await page.waitForTimeout(2000);
+      
+        await page.waitForTimeout(2000);
 
         /* Get startup link  */
         const startupLink = await page.$$eval('.jGufXH .kGqTsU .cOxsDt a', as => as.map(a => a.href));
         
         /* Adding links to the Set*/
         if(!!startupLink.toString())startupLinksSet.add(startupLink.toString());
+
+        /* get all job details of each startup */
+        const jobslink = page.url() + '/jobs';
+        const allinks = await getJobsLinks(page,jobslink);
+        console.log('alllinks',allinks)
+        const scrapedData = [];
+        for (let l of allinks){
+          const data = await getJobDetails(l,page,i,j);
+        //  console.log(data.Poste); 
+          scrapedData.push(data);
+          j++;
         }
+        console.log('done getJobdetails')
+        console.log('scrapeDate',scrapedData); 
+        writeCSV(scrapedData);
+      }
     /* Set to Array */
     let array=Array.from(startupLinksSet);
        // console.log(array)
@@ -199,45 +211,23 @@ async function getAlllinks () {
            entreprise: i
        }
        k++;
-       jsonData.push(object);
+       jsonData.push(object)  
   }
 
   /* Write startups' links in csv file */
     await csvWriter.writeRecords(jsonData);
     await browser.close();
-    return links; //jobs' link of all startups
+    //return links; //jobs' link of all startups
      
-    }catch (e){console.log('THIS IS YOUR ERROR $e',e)}               
-};
-
-
-async function main(){
-  
-    const start = await getAlllinks();
-    var j=0;
-    const browser = await puppeteer.launch({headless:false});
-    const page = await browser.newPage();
-    for(let s of start){
-    const allinks = await getJobsLinks(s.jobslink);
-    console.log(s.jobslink+' '+s.id)
- //  console.log(allinks);
-  
- //await page.setDefaultNavigationTimeout(0);
- // await page.waitForTimeout(4000);
- 
-   const scrapedData = [];
-   for (let l of allinks){
-        const data = await getJobDetails(l,page,s.id,j);
-      //  console.log(data.Poste); 
-        scrapedData.push(data);
-        j++;
+    num++;
+    await page.goto("https://www.welcometothejungle.com/fr/jobs?page="+num+"&aroundQuery=&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Logiciels&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=SaaS%20%2F%20Cloud%20Services&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Application%20mobile&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Big%20Data&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Objets%20connect%C3%A9s&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Intelligence%20artificielle%20%2F%20Machine%20Learning&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Cybers%C3%A9curit%C3%A9&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Robotique&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Blockchain");
+    await page.waitForTimeout(2500);
+    var hrefs = await page.$$eval('.dEWSJX li .biFsNh .cdtiMi .eqqpZQ a', as => as.map(a => a.href));
+    //console.log(hrefs)
     }
-    console.log('done getJobdetails')
-    //console.log(scrapedData); 
-     writeCSV(scrapedData);
+    }catch (e){console.log('THIS IS YOUR ERROR $e',e)}
+  }
 
-  };
-  await browser.close();
+getAlllinks();
   
-}
-main();    
+    
