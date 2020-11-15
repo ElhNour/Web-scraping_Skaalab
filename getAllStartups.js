@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
+const readline = require('readline-sync');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const outputFile = "./welcometothejungle-data/offresStartups.csv";
 const csvWriter = createCsvWriter({
@@ -130,6 +131,25 @@ async function getJobsLinks (page,url) {
  return hrefs; 
 };
 
+async function setTech() {
+    const browser = await puppeteer.launch({headless:false,  defaultViewport: null,});
+    const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(0);
+    await page.goto("https://www.welcometothejungle.com/fr/jobs?page=1&aroundQuery=&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Logiciels&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=SaaS%20%2F%20Cloud%20Services&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Application%20mobile&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Big%20Data&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Objets%20connect%C3%A9s&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Intelligence%20artificielle%20%2F%20Machine%20Learning&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Cybers%C3%A9curit%C3%A9&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Robotique&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Blockchain");
+   /* Read technology from the console and job */
+    const technology = readline.question('Select technologies ');
+    const remote = readline.question('Is it remote? ');
+    const testRemote= new RegExp('yes|Yes|YES','g');
+    /* Select the technology */
+    await page.type('form.ais-SearchBox-form .ais-SearchBox-input',technology); 
+    /* Select only remote jobs */ 
+   if(testRemote.test(remote)){ 
+      await page.click('[data-testid="jobs-search-search-field-location"]');
+      await page.click('[data-testid="jobs-search-results"] div.jzc9rp-6.czDGZw .sc-qQYBZ.kGBVAs');
+   }; 
+   return page;
+};
+
 async function getAlllinks () {
   /* const createCsvWriter = require('csv-writer').createObjectCsvWriter;
    const csvWriter = createCsvWriter({
@@ -141,15 +161,12 @@ async function getAlllinks () {
    fieldDelimiter: ";"
    });*/
 
-   const browser = await puppeteer.launch({headless:false});
+  
    try{
-   const page = await browser.newPage();
-   await page.setDefaultNavigationTimeout(0);
+   /* Set technology and remote and sector */
+   const page = await setTech();
 
-   /* navigate to jobs section */
-   await page.goto("https://www.welcometothejungle.com/fr/jobs?page=1&aroundQuery=&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Logiciels&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=SaaS%20%2F%20Cloud%20Services&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Application%20mobile&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Big%20Data&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Objets%20connect%C3%A9s&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Intelligence%20artificielle%20%2F%20Machine%20Learning&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Cybers%C3%A9curit%C3%A9&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Robotique&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Blockchain");
-   await page.waitForTimeout(2000);
- 
+  
    /* get all the listed jobs */
    var hrefs = await page.$$eval('.dEWSJX li .biFsNh .cdtiMi .eqqpZQ a', as => as.map(a => a.href));
    console.log('hrefs',hrefs);
