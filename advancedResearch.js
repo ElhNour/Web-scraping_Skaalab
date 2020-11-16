@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
+const readline = require('readline-sync');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 function UTF8(file) {
@@ -9,24 +10,24 @@ function UTF8(file) {
 
 async function writeCSV(scrapedData,outputFile) {
   
-    const csvWriter = createCsvWriter({
-     path: outputFile,
-    header : [
-     {id:'Id', title:'IDOFFRE'},
-     {id : 'Poste', title : 'POSTE'},
-     {id : 'Contrat', title : 'CONTRAT'},
-     {id : 'Salaire', title : 'SALAIRE'},
-     {id : 'Diplome', title : 'DIPLOME'},
-     {id : 'Experience', title : 'EXPERIENCE'},
-     {id : 'Travail', title : 'TRAVAIL'},
-     {id : 'Description', title : 'DESCRIPTION'},
-     {id: 'StartupLink', title:'STARTUP WEBSITE'}
-     ],
-     fieldDelimiter: ";"
-    
- });
-  await csvWriter.writeRecords(scrapedData);
-  UTF8(outputFile);    
+  const csvWriter = createCsvWriter({
+   path: outputFile,
+  header : [
+   {id:'Id', title:'IDOFFRE'},
+   {id : 'Poste', title : 'POSTE'},
+   {id : 'Contrat', title : 'CONTRAT'},
+   {id : 'Salaire', title : 'SALAIRE'},
+   {id : 'Diplome', title : 'DIPLOME'},
+   {id : 'Experience', title : 'EXPERIENCE'},
+   {id : 'Travail', title : 'TRAVAIL'},
+   {id : 'Description', title : 'DESCRIPTION'},
+   {id: 'StartupLink', title:'STARTUP WEBSITE'}
+   ],
+   fieldDelimiter: ";"
+  
+});
+await csvWriter.writeRecords(scrapedData);
+UTF8(outputFile);    
 };
 
 async function getJobDetails (url, page, startuplink, id) {
@@ -124,11 +125,24 @@ async function getJobDetails (url, page, startuplink, id) {
 
 };
 
-async function getJobsLinks (page,url) {
-  await page.goto(url);
-  await page.waitForTimeout(2000);
-  const hrefs = await page.$$eval('.gc3qm0-1.elzqlN div article header a', as => as.map(a => a.href)); 
- return hrefs; 
+
+async function setTech() {
+    const browser = await puppeteer.launch({headless:false,  defaultViewport: null,});
+    const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(0);
+    await page.goto("https://www.welcometothejungle.com/fr/jobs?page=1&aroundQuery=&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Logiciels&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=SaaS%20%2F%20Cloud%20Services&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Application%20mobile&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Big%20Data&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Objets%20connect%C3%A9s&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Intelligence%20artificielle%20%2F%20Machine%20Learning&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Cybers%C3%A9curit%C3%A9&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Robotique&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Blockchain");
+   /* Read technology from the console and job */
+    const technology = readline.question('Select technologies ');
+    const remote = readline.question('Is it remote? ');
+    const testRemote= new RegExp('yes|Yes|YES','g');
+    /* Select the technology */
+    await page.type('form.ais-SearchBox-form .ais-SearchBox-input',technology); 
+    /* Select only remote jobs */ 
+   if(testRemote.test(remote)){ 
+      await page.click('[data-testid="jobs-search-search-field-location"]');
+      await page.click('[data-testid="jobs-search-results"] div.jzc9rp-6.czDGZw .sc-qQYBZ.kGBVAs');
+   }; 
+   return page;
 };
 
 async function getAlllinks () {
@@ -141,25 +155,17 @@ async function getAlllinks () {
    ],
    fieldDelimiter: ";"
    });*/
-   
 
-   const browser = await puppeteer.launch({headless:false});
+  
    try{
     var number=1;
-    
-   const page = await browser.newPage();
-   await page.setDefaultNavigationTimeout(0);
+   /* Set technology and remote and sector */
+   const page = await setTech();
 
-   /* navigate to jobs section */
-   await page.goto("https://www.welcometothejungle.com/fr/jobs?page=1&aroundQuery=&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Logiciels&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=SaaS%20%2F%20Cloud%20Services&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Application%20mobile&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Big%20Data&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Objets%20connect%C3%A9s&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Intelligence%20artificielle%20%2F%20Machine%20Learning&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Cybers%C3%A9curit%C3%A9&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Robotique&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Blockchain");
-   await page.waitForTimeout(2000);
- 
    /* get all the listed jobs */
    var hrefs = await page.$$eval('.dEWSJX li .biFsNh .cdtiMi .eqqpZQ a', as => as.map(a => a.href));
    console.log('hrefs',hrefs);
    var num=1;// page number
-   var tmp='';
-   let startupLinksSet = new Set();
    var j=0;
    var scrapedData = [];
    /* browse all pages */
@@ -176,38 +182,24 @@ async function getAlllinks () {
        /* Get startup link  */
        const startupLink = await page.$$eval('.jGufXH .kGqTsU .cOxsDt a', as => as.map(a => a.href));
        
-       /* Adding links to the Set*/
-     if(!!startupLink.toString())startupLinksSet.add(startupLink.toString());
-       if ((!startupLinksSet.has(tmp))||(!startupLinksSet.has(startupLink.toString()))){
-         //console.log('tmp before',tmp)
-         tmp=startupLink.toString();
-         //console.log('tmp after',tmp)
-
-       /* get all job details of each startup */
-       const jobslink = page.url() + '/jobs';
-       const allinks = await getJobsLinks(page,jobslink);
-       //console.log('alllinks',allinks)
-       
-       for (let l of allinks){
-         const data = await getJobDetails(l,page,startupLink.toString(),j);
-         scrapedData.push(data);
-         j++;
-         if (j%2==0){
-           var outputFile= './welcometothejungle-data/batch-'+number+'.csv';
-           writeCSV(scrapedData,outputFile);
-           number++;
-           scrapedData=[];
-         }
-         //console.log('j',j)
-       }
-      //console.log('scrapeDate',scrapedData); 
-       
-     }}
-   
+        /* Comback to the job offer to get all details */
+      await page.goto(hrefs[i]);
+      const data = await getJobDetails(hrefs[i],page,startupLink.toString(),j);
+      scrapedData.push(data);
+      console.log(scrapedData)
+      j++;
+      if (j%2==0){
+        var outputFile= './welcometothejungle-data/batch-AR-'+number+'.csv';
+        writeCSV(scrapedData,outputFile);
+        number++;
+        scrapedData=[];
+      
+     }
+    }
+     
    /* Next page */ 
    num++;
    await page.goto("https://www.welcometothejungle.com/fr/jobs?page="+num+"&aroundQuery=&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Logiciels&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=SaaS%20%2F%20Cloud%20Services&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Application%20mobile&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Big%20Data&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Objets%20connect%C3%A9s&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Intelligence%20artificielle%20%2F%20Machine%20Learning&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Cybers%C3%A9curit%C3%A9&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Robotique&refinementList%5Bsectors_name.fr.Tech%5D%5B%5D=Blockchain");
-   console.log('next')
    await page.waitForTimeout(2000);
    var hrefs = await page.$$eval('.dEWSJX li .biFsNh .cdtiMi .eqqpZQ a', as => as.map(a => a.href));
    
