@@ -97,19 +97,21 @@ async function getJobDetails(url, page, startuplink, sname, id) {
 
   }
   /*Get post's description*/
+  
   const description = await page.evaluate(() => {
     return [...document.body.querySelectorAll('[data-t="191qin1" ] div.sc-11obzva-1.fKjhRQ ')]
       .map(element => element.innerText)
       .join('\n');
-
-
   });
   /*Regular expression for remote jobs*/
   const remoteTest = new RegExp('Télétravail', 'g');
   /*Check the syntax*/
-  if (remoteTest.test(await page.$eval(".sc-1qc42fc-2.dJqCnn", travail => travail.textContent)))
+  try{
+    if (remoteTest.test(await page.$eval('.sc-1qc42fc-2.dJqCnn', travail => travail.textContent)))
     /*Affect value if it's correct*/
-    travail = await page.$eval(".sc-1qc42fc-2.dJqCnn", travail => travail.textContent);
+    travail = await page.$eval('.sc-1qc42fc-2.dJqCnn', travail => travail.textContent);
+  }catch(e){travail=''}
+ 
 
 
   return {
@@ -147,59 +149,62 @@ async function setTech(page, technology, remote) {
   var tech = false;
   if (domains.includes("Tech")) {
     tech = true;
-    console.log('index', domains.indexOf('Tech'))
     const index = domains.indexOf('Tech');
     const selector1 = '[data-testid="company-jobs-search-widgets-profession-' + index + '"]';
     await page.waitForTimeout(1000);
-    //await page.waitForSelector(selector1)
     await page.click(selector1);
 
     const subdomains = await page.$$('[data-testid="company-jobs-search-widgets-profession-' + index + '-results"] .ais-RefinementList ul li.ais-RefinementList-item');
-    //console.log(subdomains)
+
     for (let j = 0; j < subdomains.length; j++) {
-      await page.waitForTimeout(1000);
-      await subdomains[j].click();
+      //await page.waitForTimeout(1000);
+      subdomains[j].click();
+      if(j==3){        
+        await page.evaluate((index)=>{
+            const xp=[...document.body.querySelectorAll('[data-testid="company-jobs-search-widgets-profession-'+index+'-results"] .ais-RefinementList ul li.ais-RefinementList-item')]
+        .forEach(element => element.scrollIntoView());
+        },index);  
+       }
+  
     }
 
     const testRemote = new RegExp('yes|Yes|YES', 'g');
+    
+    if (technology!='')
     /* Select the technology */
     await page.type('form.ais-SearchBox-form .ais-SearchBox-input', technology);
-    // await page.waitForSelector('[title= "Effacer"]');
-    //await page.click('[title = "Effacer"]');
-    /* Select only remote jobs */
-    if (testRemote.test(remote)) {
-
-      await page.click('[data-testid="company-jobs-search-field-location"]');
-      await page.click('[data-testid="company-jobs-results"] div.jzc9rp-6.czDGZw .sc-qQYBZ.kGBVAs');
-    };
-
-
+    if (remote!=''){
+      /* Select only remote jobs */
+        if (testRemote.test(remote)) {
+          await page.click('[data-testid="company-jobs-search-field-location"]');
+          await page.click('[data-testid="company-jobs-results"] div.jzc9rp-6.czDGZw .sc-qQYBZ.kGBVAs');
+        };
+    }
   }
-  await page.waitForTimeout(1000)
+  //await page.waitForTimeout(1000)
   return tech;
 };
 async function getJobsLinks(page) {
-  //   await page.goto(url);
-  //  await page.waitForTimeout(2000);
   const hrefs = await page.$$eval('.gc3qm0-1.elzqlN div article header a', as => as.map(a => a.href));
-
   return hrefs;
 };
 
 async function getAll() {
+   /* Read technology from the console and job */
+  const technology = readline.question('Select technologies ');
+  const remote = readline.question('Is it remote? ');
+  var today = new Date();
+  var start=today.getTime();
   const browser = await puppeteer.launch({ headless: false, defaultViewport: null, executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' });
   try {
-    const page = await browser.newPage();
+    var page = await browser.newPage();
     await page.setDefaultNavigationTimeout(0);
     await page.goto("https://www.welcometothejungle.com/fr/companies?page=1&aroundQuery=");
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2000)
     var Slinks = await page.$$eval('.sc-1kkiv1h-3.hrptYB header h3 a', as => as.map(a => a.href));
     //console.log('slinks', Slinks);
-    /* Read technology from the console and job */
-    const technology = readline.question('Select technologies ');
-    const remote = readline.question('Is it remote? ');
     var j = 0;
-    var number = 1;
+    var number = 2;
     var num = 1; //page number
     var scrapedData = [];
     while (Slinks.length != 0) {
@@ -215,13 +220,14 @@ async function getAll() {
           //console.log('sname, link', Sname,startupLink)
           const tech = await setTech(page, technology, remote);
           if (tech) {
-            var numberPage = await page.$('li[class="ais-Pagination-item ais-Pagination-item--nextPage"] a');
             do {
+              await page.waitForTimeout(1000);
+              var numberPage = await page.$('li[class="ais-Pagination-item ais-Pagination-item--nextPage"] a');
               const list = await getJobsLinks(page);
               for (let l of list) {
                 const data = await getJobDetails(l, page, startupLink.toString(), Sname, j);
                 scrapedData.push(data);
-                console.log('scrapeddata', scrapedData)
+                //console.log('scrapeddata', scrapedData)
                 j++;
                 var outputFile = './welcometothejungle-data/all-startups/batch-' + number + '.csv';
                 writeCSV(scrapedData, outputFile);
@@ -230,25 +236,24 @@ async function getAll() {
                   scrapedData = [];
                 }
               }
-              if (numberPage) {
-
-                await page.evaluate(() => {
-                  document.querySelector('li[class="ais-Pagination-item ais-Pagination-item--nextPage"] a').click()
-                })
-                numberPage = await page.$('li[class="ais-Pagination-item ais-Pagination-item--nextPage"] a');
+            
+              if (numberPage!=null) {
+                numberPage.click();
               }
-            } while (numberPage)
+            } while (numberPage!=null)
           }
         }
       }
       /* Next page */
       num++;
-      await page.goto("https://www.welcometothejungle.com/fr/companies?page=" + num + "&aroundQuery=");
-      //console.log('next')
-      await page.waitForTimeout(2000);
-      Slinks = await page.$$eval('.dEWSJX li .biFsNh .cdtiMi .eqqpZQ a', as => as.map(a => a.href));
-      browser.close();
+      await page.goto('https://www.welcometothejungle.com/fr/companies?page=' + num + '&aroundQuery=');
+      console.log('next',num)
+      await page.waitForTimeout(3000);
+      Slinks = await page.$$eval('.sc-1kkiv1h-3.hrptYB header h3 a', as => as.map(a => a.href));
     }
+    browser.close();
+    var end=today.getTime();
+        console.log('execution time: ',(end-start)/3600)
   } catch (e) { console.log('THIS IS YOUR ERROR $e', e) }
 }
 getAll();
