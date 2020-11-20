@@ -237,6 +237,8 @@ async function getAll() {
                   number++;
                   scrapedData = [];
                 }
+                var sleep=performance.now()
+                if (((sleep-start)/3600000)==2) await page.waitForTimeout(15*60000);
               }
             
               if (numberPage!=null) {
