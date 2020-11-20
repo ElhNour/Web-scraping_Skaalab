@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const readline = require('readline-sync');
+const performance = require('perf_hooks').performance;
 function UTF8(file) {
   let fileContents = fs.readFileSync(file);
   fs.writeFileSync(file, "\ufeff" + fileContents);
@@ -135,7 +136,7 @@ async function setTech(page, technology, remote) {
   /* Uncheck ALGERIA */
   await page.waitForSelector('.sc-qZtCU.hQiWhi.ais-SearchBox-reset');
   await page.click('.sc-qZtCU.hQiWhi.ais-SearchBox-reset');
-  await page.waitForTimeout(2000)
+  await page.waitForTimeout(2000);
 
   /* Check Professions */
   await page.click('.cgXUxx header');
@@ -144,6 +145,7 @@ async function setTech(page, technology, remote) {
       .map(element => element.textContent)
 
   });
+  await page.waitForTimeout(2000);
   //console.log(domains)
 
   var tech = false;
@@ -157,7 +159,7 @@ async function setTech(page, technology, remote) {
     const subdomains = await page.$$('[data-testid="company-jobs-search-widgets-profession-' + index + '-results"] .ais-RefinementList ul li.ais-RefinementList-item');
 
     for (let j = 0; j < subdomains.length; j++) {
-      //await page.waitForTimeout(1000);
+      await page.waitForTimeout(2000);
       subdomains[j].click();
       if(j==3){        
         await page.evaluate((index)=>{
@@ -191,20 +193,20 @@ async function getJobsLinks(page) {
 
 async function getAll() {
    /* Read technology from the console and job */
-  const technology = readline.question('Select technologies ');
-  const remote = readline.question('Is it remote? ');
-  var today = new Date();
-  var start=today.getTime();
-  const browser = await puppeteer.launch({ headless: false, defaultViewport: null, executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' });
+  const technology = readline.question('Technologies: (to select all press Enter) ');
+  const remote = readline.question('Is it remote?(Yes/Enter) ');
+  /**Recuperer le temps de début d'execution  */
+  var start=performance.now();
+  const browser = await puppeteer.launch({ headless: false, defaultViewport: null, executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' });
   try {
     var page = await browser.newPage();
-    await page.setDefaultNavigationTimeout(0);
-    await page.goto("https://www.welcometothejungle.com/fr/companies?page=1&aroundQuery=");
-    await page.waitForTimeout(2000)
+    
+    await page.goto('https://www.welcometothejungle.com/fr/companies?page=1&aroundQuery=');
+    await page.waitForTimeout(7000);
     var Slinks = await page.$$eval('.sc-1kkiv1h-3.hrptYB header h3 a', as => as.map(a => a.href));
     //console.log('slinks', Slinks);
     var j = 0;
-    var number = 2;
+    var number = 1;
     var num = 1; //page number
     var scrapedData = [];
     while (Slinks.length != 0) {
@@ -246,14 +248,16 @@ async function getAll() {
       }
       /* Next page */
       num++;
-      await page.goto('https://www.welcometothejungle.com/fr/companies?page=' + num + '&aroundQuery=');
-      console.log('next',num)
-      await page.waitForTimeout(3000);
+      await page.goto('https://www.welcometothejungle.com/fr/companies?page='+num+'&aroundQuery=');
+     // console.log('next',num)
+      await page.waitForTimeout(7000);
       Slinks = await page.$$eval('.sc-1kkiv1h-3.hrptYB header h3 a', as => as.map(a => a.href));
     }
     browser.close();
-    var end=today.getTime();
-        console.log('execution time: ',(end-start)/3600)
-  } catch (e) { console.log('THIS IS YOUR ERROR $e', e) }
+    /** Recuperer le temps de la fin d'execution */
+    var end=performance.now(); 
+   /** Calculer le temps total d'execution en minutes */
+        console.log('execution time: ',(end-start)/60000,'m');
+        } catch (e) { console.log('THIS IS YOUR ERROR $e', e) }
 }
 getAll();
