@@ -1,44 +1,63 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs-extra');
+/*var mysql = require('mysql');
+var con = mysql.createConnection({
+  host: "127.0.0.1",
+  user: "root",
+  password: "password",
+  database: "scrapeddata"
+});
+con.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");});*/
+
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const readline = require('readline-sync');
+
 const performance = require('perf_hooks').performance;
-function UTF8(file) {
-  let fileContents = fs.readFileSync(file);
-  fs.writeFileSync(file, "\ufeff" + fileContents);
-}
 
-async function writeCSV(scrapedData, outputFile) {
-
-  const csvWriter = createCsvWriter({
-    path: outputFile,
+async function writeCSV1(scrapedData, outputFile1) {
+  const csvWriter1 = createCsvWriter({
+    path: outputFile1,
     header: [
 
-      { id: 'Startup', title: 'STARTUP' },
-      { id: 'StartupLink', title: 'STARTUP WEBSITE' },
-      { id: 'Id', title: 'IDOFFRE' },
-      { id: 'Poste', title: 'POSTE' },
-      { id: 'Contrat', title: 'CONTRAT' },
-      { id: 'Salaire', title: 'SALAIRE' },
-      { id: 'Diplome', title: 'DIPLOME' },
-      { id: 'Experience', title: 'EXPERIENCE' },
-      { id: 'Travail', title: 'TRAVAIL' },
-      { id: 'Description', title: 'DESCRIPTION' },
-
+      { id: 'name', title: 'name' },
+      { id: 'website', title: 'website' },
+      {id: 'sourceID', title:'sourceID'}
     ],
-    fieldDelimiter: ";"
+    fieldDelimiter: ";",
 
   });
-  await csvWriter.writeRecords(scrapedData);
-  UTF8(outputFile);
+  await csvWriter1.writeRecords(scrapedData);
+};
+
+async function writeCSV2(scrapedData, outputFile2) {
+
+  const csvWriter2 = createCsvWriter({
+    path: outputFile2,
+    header: [
+      { id: 'Poste', title: 'poste' },
+      { id: 'Contrat', title: 'contrat' },
+      { id: 'Salaire', title: 'salaire' },
+      { id: 'Diplome', title: 'diplome' },
+      { id: 'Experience', title: 'experience' },
+      { id: 'Travail', title: 'travail' },
+      { id: 'Description', title: 'description' },
+      { id: 'Skills',title: 'skills'},
+      {id: 'IdStartup', title:'startupID'}
+    ],
+    fieldDelimiter: ";",
+
+  });
+
+  await csvWriter2.writeRecords(scrapedData);
 };
 
 
-async function getJobDetails(url, page, startuplink, sname, id) {
+async function getJobDetails(url, page,idstartup) {
 
   await page.goto(url);
   //await page.setDefaultNavigationTimeout(0);
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000);
   const poste = await page.$eval('.sc-12bzhsi-3.cnIGeJ', poste => poste.textContent);
   /*Get all icons classename*/
   const texts = await page.evaluate(() => {
@@ -98,35 +117,36 @@ async function getJobDetails(url, page, startuplink, sname, id) {
 
   }
   /*Get post's description*/
-  
-  const description = await page.evaluate(() => {
-    return [...document.body.querySelectorAll('[data-t="191qin1" ] div.sc-11obzva-1.fKjhRQ ')]
-      .map(element => element.innerText)
-      .join('\n');
-  });
+
+  var description = await page.$eval('.sc-11obzva-1.fKjhRQ',description=>description.textContent)
+ /* description=description.replace(/'/gi,"''")
+  description=description.replace(/"/gi,'')
+  description=description.replace(/\//gi,'')
+  description=description.replace(/([\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]|[\u2708-\uFE0F])/g, '');  
+*/
+
   /*Regular expression for remote jobs*/
   const remoteTest = new RegExp('Télétravail', 'g');
   /*Check the syntax*/
-  try{
+  try {
     if (remoteTest.test(await page.$eval('.sc-1qc42fc-2.dJqCnn', travail => travail.textContent)))
-    /*Affect value if it's correct*/
-    travail = await page.$eval('.sc-1qc42fc-2.dJqCnn', travail => travail.textContent);
-  }catch(e){travail=''}
- 
+      /*Affect value if it's correct*/
+      travail = await page.$eval('.sc-1qc42fc-2.dJqCnn', travail => travail.textContent);
+  } catch (e) { travail = '' }
+
 
 
   return {
-    Startup: sname,
-    StartupLink: startuplink,
-    Id: id,
+
     Poste: poste,
     Contrat: contrat,
     Salaire: salaire,
     Diplome: diplome,
     Experience: experience,
     Travail: travail,
-    Description: description,
-
+    Description:description.toLowerCase(),
+    Skills: '',
+    IdStartup:idstartup
   }
 
 
@@ -136,7 +156,7 @@ async function setTech(page, technology, remote) {
   /* Uncheck ALGERIA */
   await page.waitForSelector('.sc-qZtCU.hQiWhi.ais-SearchBox-reset');
   await page.click('.sc-qZtCU.hQiWhi.ais-SearchBox-reset');
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000);
 
   /* Check Professions */
   await page.click('.cgXUxx header');
@@ -159,28 +179,28 @@ async function setTech(page, technology, remote) {
     const subdomains = await page.$$('[data-testid="company-jobs-search-widgets-profession-' + index + '-results"] .ais-RefinementList ul li.ais-RefinementList-item');
 
     for (let j = 0; j < subdomains.length; j++) {
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(1000);
       subdomains[j].click();
-      if(j==3){        
-        await page.evaluate((index)=>{
-            const xp=[...document.body.querySelectorAll('[data-testid="company-jobs-search-widgets-profession-'+index+'-results"] .ais-RefinementList ul li.ais-RefinementList-item')]
-        .forEach(element => element.scrollIntoView());
-        },index);  
-       }
-  
+      if (j == 3) {
+        await page.evaluate((index) => {
+          const xp = [...document.body.querySelectorAll('[data-testid="company-jobs-search-widgets-profession-' + index + '-results"] .ais-RefinementList ul li.ais-RefinementList-item')]
+            .forEach(element => element.scrollIntoView());
+        }, index);
+      }
+
     }
 
     const testRemote = new RegExp('yes|Yes|YES', 'g');
-    
-    if (technology!='')
-    /* Select the technology */
-    await page.type('form.ais-SearchBox-form .ais-SearchBox-input', technology);
-    if (remote!=''){
+
+    if (technology != '')
+      /* Select the technology */
+      await page.type('form.ais-SearchBox-form .ais-SearchBox-input', technology);
+    if (remote != '') {
       /* Select only remote jobs */
-        if (testRemote.test(remote)) {
-          await page.click('[data-testid="company-jobs-search-field-location"]');
-          await page.click('[data-testid="company-jobs-results"] div.jzc9rp-6.czDGZw .sc-qQYBZ.kGBVAs');
-        };
+      if (testRemote.test(remote)) {
+        await page.click('[data-testid="company-jobs-search-field-location"]');
+        await page.click('[data-testid="company-jobs-results"] div.jzc9rp-6.czDGZw .sc-qQYBZ.kGBVAs');
+      };
     }
   }
   //await page.waitForTimeout(1000)
@@ -192,74 +212,121 @@ async function getJobsLinks(page) {
 };
 
 async function getAll() {
-   /* Read technology from the console and job */
+  /* Read technology from the console and job */
   const technology = readline.question('Technologies: (to select all press Enter) ');
   const remote = readline.question('Is it remote?(Yes/Enter) ');
   /**Recuperer le temps de début d'execution  */
-  var start=performance.now();
-  const browser = await puppeteer.launch({ headless: false, defaultViewport: null, executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' });
+  var start = performance.now();
+
+  /* Get Startup ID of the last inserted offer
+  let query= "select from startup (name) where idstartup in (select from offre (startupID)....)"
+  con.query(query,(error,response) => {
+    console.log(error || response);
+    //
+  })
+*/
+
+  const browser = await puppeteer.launch({ headless: false, defaultViewport: null});
   try {
     var page = await browser.newPage();
-    
+    await page.setDefaultNavigationTimeout(0);
+
     await page.goto('https://www.welcometothejungle.com/fr/companies?page=1&aroundQuery=');
-    await page.waitForTimeout(7000);
+    await page.waitForTimeout(4000);
     var Slinks = await page.$$eval('.sc-1kkiv1h-3.hrptYB header h3 a', as => as.map(a => a.href));
     //console.log('slinks', Slinks);
     var j = 0;
-    var number = 1;
+    var s = 0;
+    var idstartup=1;
+    var number1 = 1;
+    var number2 = 1;
     var num = 1; //page number
     var scrapedData = [];
-    while (Slinks.length != 0) {
+    var startups = []
+   // while (Slinks.length != 0) {
+     while(num<=17){
       for (let sl of Slinks) {
         await page.goto(sl + '/jobs');
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
         const value = await page.$eval('.fpJTTV ul li a .bnTGzJ', value => value.innerText);
         //console.log('value',value)
         /*Get start-up name */
         if (value != '0') {
-          const Sname = await page.$eval('[data-t="dew4pq"]', Sname => Sname.textContent);
-          const startupLink = await page.$$eval('.jGufXH .kGqTsU .cOxsDt a', as => as.map(a => a.href));
-          //console.log('sname, link', Sname,startupLink)
+          const Sname = await page.$eval('.cchmzi-2.llLwPi', Sname => Sname.textContent);
+          try{
+            var startupLink = await page.$eval('.jGufXH .kGqTsU .cOxsDt a',a => a.href);
+          }catch(e){
+            startupLink=null
+          }
+           //var startup = [[Sname,startupLink,1]]
+           var startup={
+             name:Sname,
+             website:startupLink,
+             sourceID:1
+           }
+
+          /*let query="INSERT IGNORE INTO startup (name,website,sourceID) VALUES ?"
+          con.query(query, [startup], (error, response) => {
+            console.log(error || response);
+            return idstartup=response.insertId
+          })*/
+                    
           const tech = await setTech(page, technology, remote);
           if (tech) {
+            startups.push(startup)
+            s++;
+          var outputFile1='./startups/batch-'+number1+'.csv'
+          writeCSV1(startups,outputFile1)
+          if(s%5000==0){
+            number1++;
+            startups=[]
+          }
+
             do {
               await page.waitForTimeout(1000);
               var numberPage = await page.$('li[class="ais-Pagination-item ais-Pagination-item--nextPage"] a');
               const list = await getJobsLinks(page);
               for (let l of list) {
-                const data = await getJobDetails(l, page, startupLink.toString(), Sname, j);
+                const data = await getJobDetails(l, page,idstartup);
                 scrapedData.push(data);
+                
+              /* query= "insert into offre (poste,contrat,salaire,diplome,experience,travail,description,startupID) Select '"+ data.Poste+"','"+data.Contrat+"','"+data.Salaire+"','"+data.Diplome+"','"+data.Experience+"','"+data.Travail+"','"+data.Description+"',"+idstartup+" Where not exists(select * from offre where description  ='"+data.Description+"')"
+          con.query(query,(error, response) => {
+            console.log('OFFRE',error || response);
+          })*/
                 //console.log('scrapeddata', scrapedData)
+                var outputFile2 = './offres/batch-' + number2 + '.csv';
+                writeCSV2(scrapedData, outputFile2);
+                //console.log(scrapedData)
                 j++;
-                var outputFile = './welcometothejungle-data/all-startups/batch-' + number + '.csv';
-                writeCSV(scrapedData, outputFile);
                 if (j % 5000 == 0) {
-                  number++;
+                  number2++;
                   scrapedData = [];
                 }
-                var sleep=performance.now()
-                if (((sleep-start)/3600000)==2) await page.waitForTimeout(15*60000);
+                var sleep = performance.now()
+                if (((sleep - start) / 3600000) == 2) await page.waitForTimeout(15 * 60000);
               }
-            
-              if (numberPage!=null) {
+
+              if (numberPage != null) {
                 numberPage.click();
               }
-            } while (numberPage!=null)
+            } while (numberPage != null)
+            idstartup++;
           }
         }
       }
       /* Next page */
       num++;
-      await page.goto('https://www.welcometothejungle.com/fr/companies?page='+num+'&aroundQuery=');
-     // console.log('next',num)
-      await page.waitForTimeout(7000);
+      await page.goto('https://www.welcometothejungle.com/fr/companies?page=' + num + '&aroundQuery=');
+      // console.log('next',num)
+      await page.waitForTimeout(4500);
       Slinks = await page.$$eval('.sc-1kkiv1h-3.hrptYB header h3 a', as => as.map(a => a.href));
     }
     browser.close();
     /** Recuperer le temps de la fin d'execution */
-    var end=performance.now(); 
-   /** Calculer le temps total d'execution en minutes */
-        console.log('execution time: ',(end-start)/60000,'m');
-        } catch (e) { console.log('THIS IS YOUR ERROR $e', e) }
+    var end = performance.now();
+    /** Calculer le temps total d'execution en minutes */
+    console.log('execution time: ', (end - start) / 60000, 'm');
+  } catch (e) { console.log('THIS IS YOUR ERROR $e', e) }
 }
 getAll();
