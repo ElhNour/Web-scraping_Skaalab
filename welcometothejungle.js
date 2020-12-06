@@ -57,7 +57,7 @@ async function getJobDetails(url, page,idstartup) {
 
   await page.goto(url);
   //await page.setDefaultNavigationTimeout(0);
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(4000);
   const poste = await page.$eval('.sc-12bzhsi-3.cnIGeJ', poste => poste.textContent);
   /*Get all icons classename*/
   const texts = await page.evaluate(() => {
@@ -118,7 +118,9 @@ async function getJobDetails(url, page,idstartup) {
   }
   /*Get post's description*/
 
-  var description = await page.$eval('.sc-11obzva-1.fKjhRQ',description=>description.textContent)
+  var description = await page.evaluate(()=>{
+    return [...document.body.querySelectorAll('.sc-11obzva-1.fKjhRQ')].map(element=>element.textContent).join('\n');
+  });
  /* description=description.replace(/'/gi,"''")
   description=description.replace(/"/gi,'')
   description=description.replace(/\//gi,'')
@@ -144,7 +146,7 @@ async function getJobDetails(url, page,idstartup) {
     Diplome: diplome,
     Experience: experience,
     Travail: travail,
-    Description:description.toLowerCase(),
+    Description:description,
     Skills: '',
     IdStartup:idstartup
   }
@@ -226,7 +228,7 @@ async function getAll() {
   })
 */
 
-  const browser = await puppeteer.launch({ headless: false, defaultViewport: null});
+  const browser = await puppeteer.launch({ headless: false, defaultViewport: null,executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',});
   try {
     var page = await browser.newPage();
     await page.setDefaultNavigationTimeout(0);
@@ -277,14 +279,14 @@ async function getAll() {
             s++;
           var outputFile1='./startups/batch-'+number1+'.csv'
           writeCSV1(startups,outputFile1)
+          startups=[]
           if(s%5000==0){
             number1++;
             startups=[]
           }
 
             do {
-              await page.waitForTimeout(1000);
-              var numberPage = await page.$('li[class="ais-Pagination-item ais-Pagination-item--nextPage"] a');
+              await page.waitForTimeout(4000);
               const list = await getJobsLinks(page);
               for (let l of list) {
                 const data = await getJobDetails(l, page,idstartup);
@@ -297,6 +299,7 @@ async function getAll() {
                 //console.log('scrapeddata', scrapedData)
                 var outputFile2 = './offres/batch-' + number2 + '.csv';
                 writeCSV2(scrapedData, outputFile2);
+                scrapedData=[]
                 //console.log(scrapedData)
                 j++;
                 if (j % 5000 == 0) {
@@ -306,7 +309,8 @@ async function getAll() {
                 var sleep = performance.now()
                 if (((sleep - start) / 3600000) == 2) await page.waitForTimeout(15 * 60000);
               }
-
+              var numberPage = await page.$('li[class="ais-Pagination-item ais-Pagination-item--nextPage"] a');
+              await page.waitForTimeout(2000)
               if (numberPage != null) {
                 numberPage.click();
               }
@@ -319,7 +323,7 @@ async function getAll() {
       num++;
       await page.goto('https://www.welcometothejungle.com/fr/companies?page=' + num + '&aroundQuery=');
       // console.log('next',num)
-      await page.waitForTimeout(4500);
+      await page.waitForTimeout(5000);
       Slinks = await page.$$eval('.sc-1kkiv1h-3.hrptYB header h3 a', as => as.map(a => a.href));
     }
     browser.close();
