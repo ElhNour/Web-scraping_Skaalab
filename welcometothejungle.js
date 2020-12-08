@@ -3,7 +3,7 @@ const puppeteer = require('puppeteer');
 var con = mysql.createConnection({
   host: "127.0.0.1",
   user: "root",
-  password: "password",
+  password: "123456789",
   database: "scrapeddata"
 });
 con.connect(function(err) {
