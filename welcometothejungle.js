@@ -22,7 +22,7 @@ async function writeCSV1(scrapedData, outputFile1) {
 
       { id: 'name', title: 'name' },
       { id: 'website', title: 'website' },
-      {id: 'sourceID', title:'sourceID'}
+      { id: 'sourceID', title: 'sourceID' }
     ],
     fieldDelimiter: ";",
 
@@ -42,8 +42,8 @@ async function writeCSV2(scrapedData, outputFile2) {
       { id: 'Experience', title: 'experience' },
       { id: 'Travail', title: 'travail' },
       { id: 'Description', title: 'description' },
-      { id: 'Skills',title: 'skills'},
-      {id: 'IdStartup', title:'startupID'}
+      { id: 'Skills', title: 'skills' },
+      { id: 'IdStartup', title: 'startupID' }
     ],
     fieldDelimiter: ";",
 
@@ -53,7 +53,7 @@ async function writeCSV2(scrapedData, outputFile2) {
 };
 
 
-async function getJobDetails(url, page,idstartup) {
+async function getJobDetails(url, page, idstartup) {
 
   await page.goto(url);
   //await page.setDefaultNavigationTimeout(0);
@@ -118,14 +118,14 @@ async function getJobDetails(url, page,idstartup) {
   }
   /*Get post's description*/
 
-  var description = await page.evaluate(()=>{
-    return [...document.body.querySelectorAll('.sc-11obzva-1.fKjhRQ')].map(element=>element.textContent).join('\n');
+  var description = await page.evaluate(() => {
+    return [...document.body.querySelectorAll('.sc-11obzva-1.fKjhRQ')].map(element => element.textContent).join('\n');
   });
- /* description=description.replace(/'/gi,"''")
-  description=description.replace(/"/gi,'')
-  description=description.replace(/\//gi,'')
-  description=description.replace(/([\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]|[\u2708-\uFE0F])/g, '');  
-*/
+  /* description=description.replace(/'/gi,"''")
+   description=description.replace(/"/gi,'')
+   description=description.replace(/\//gi,'')
+   description=description.replace(/([\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]|[\u2708-\uFE0F])/g, '');  
+ */
 
   /*Regular expression for remote jobs*/
   const remoteTest = new RegExp('Télétravail', 'g');
@@ -146,9 +146,9 @@ async function getJobDetails(url, page,idstartup) {
     Diplome: diplome,
     Experience: experience,
     Travail: travail,
-    Description:description,
+    Description: description.toLowerCase(),
     Skills: '',
-    IdStartup:idstartup
+    IdStartup: idstartup
   }
 
 
@@ -220,15 +220,7 @@ async function getAll() {
   /**Recuperer le temps de début d'execution  */
   var start = performance.now();
 
-  /* Get Startup ID of the last inserted offer
-  let query= "select from startup (name) where idstartup in (select from offre (startupID)....)"
-  con.query(query,(error,response) => {
-    console.log(error || response);
-    //
-  })
-*/
-
-  const browser = await puppeteer.launch({ headless: false, defaultViewport: null,executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',});
+  const browser = await puppeteer.launch({ headless: false, defaultViewport: null, executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe', });
   try {
     var page = await browser.newPage();
     await page.setDefaultNavigationTimeout(0);
@@ -239,14 +231,14 @@ async function getAll() {
     //console.log('slinks', Slinks);
     var j = 0;
     var s = 0;
-    var idstartup=1;
+    var idstartup = 1;
     var number1 = 1;
     var number2 = 1;
     var num = 1; //page number
     var scrapedData = [];
     var startups = []
-   // while (Slinks.length != 0) {
-     while(num<=17){
+    // while (Slinks.length != 0) {
+    while (Slinks.length != 0) {
       for (let sl of Slinks) {
         await page.goto(sl + '/jobs');
         await page.waitForTimeout(3000);
@@ -255,51 +247,40 @@ async function getAll() {
         /*Get start-up name */
         if (value != '0') {
           const Sname = await page.$eval('.cchmzi-2.llLwPi', Sname => Sname.textContent);
-          try{
-            var startupLink = await page.$eval('.jGufXH .kGqTsU .cOxsDt a',a => a.href);
-          }catch(e){
-            startupLink=null
+          try {
+            var startupLink = await page.$eval('.jGufXH .kGqTsU .cOxsDt a', a => a.href);
+          } catch (e) {
+            startupLink = null
           }
-           //var startup = [[Sname,startupLink,1]]
-           var startup={
-             name:Sname,
-             website:startupLink,
-             sourceID:1
-           }
+          //var startup = [[Sname,startupLink,1]]
+          var startup = {
+            name: Sname,
+            website: startupLink,
+            sourceID: 1
+          }
 
-          /*let query="INSERT IGNORE INTO startup (name,website,sourceID) VALUES ?"
-          con.query(query, [startup], (error, response) => {
-            console.log(error || response);
-            return idstartup=response.insertId
-          })*/
-                    
+
           const tech = await setTech(page, technology, remote);
           if (tech) {
             startups.push(startup)
             s++;
-          var outputFile1='./startups/batch-'+number1+'.csv'
-          writeCSV1(startups,outputFile1)
-          startups=[]
-          if(s%5000==0){
-            number1++;
-            startups=[]
-          }
+            var outputFile1 = './startups/batch-' + number1 + '.csv'
+            writeCSV1(startups, outputFile1)
+            if (s % 5000 == 0) {
+              number1++;
+              startups = []
+            }
 
             do {
               await page.waitForTimeout(4000);
               const list = await getJobsLinks(page);
               for (let l of list) {
-                const data = await getJobDetails(l, page,idstartup);
+                const data = await getJobDetails(l, page, idstartup);
                 scrapedData.push(data);
-                
-              /* query= "insert into offre (poste,contrat,salaire,diplome,experience,travail,description,startupID) Select '"+ data.Poste+"','"+data.Contrat+"','"+data.Salaire+"','"+data.Diplome+"','"+data.Experience+"','"+data.Travail+"','"+data.Description+"',"+idstartup+" Where not exists(select * from offre where description  ='"+data.Description+"')"
-          con.query(query,(error, response) => {
-            console.log('OFFRE',error || response);
-          })*/
+
                 //console.log('scrapeddata', scrapedData)
                 var outputFile2 = './offres/batch-' + number2 + '.csv';
                 writeCSV2(scrapedData, outputFile2);
-                scrapedData=[]
                 //console.log(scrapedData)
                 j++;
                 if (j % 5000 == 0) {

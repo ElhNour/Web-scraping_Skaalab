@@ -5,7 +5,7 @@ const outputFile = './welcometothejungle-data/offresStartup.csv'
 const csvWriter = createCsvWriter({
   path: './welcometothejungle-data/offresStartup.csv',
   header: [
-    { id: 'Startup', title:'STARTUP'},
+    { id: 'Startup', title: 'STARTUP' },
     { id: 'StartupLink', title: 'STARTUP WEBSITE' },
     { id: 'Poste', title: 'POSTE' },
     { id: 'Contrat', title: 'CONTRAT' },
@@ -29,7 +29,7 @@ async function writeCSV(scrapedData) {
 };
 
 /* Get all details concerning one job, */
-async function getJobDetails(url, page,startupLink) {
+async function getJobDetails(url, page, startupLink) {
 
   await page.goto(url);
   const poste = await page.$eval('.sc-12bzhsi-3.cnIGeJ', poste => poste.textContent);
@@ -60,7 +60,7 @@ async function getJobDetails(url, page,startupLink) {
   /* return values in an object */
   return {
     Startup: nom,
-    StartupLink:startupLink,
+    StartupLink: startupLink,
     Poste: poste,
     Contrat: contrat,
     Salaire: salaire,
@@ -83,19 +83,19 @@ async function getJobsLinks() {
   const hrefs = await page.$$eval('.gc3qm0-1.elzqlN div article header a', as => as.map(a => a.href));
   browser.close();
   //console.log(hrefs);
-  return {hrefs,startupLink};
+  return { hrefs, startupLink };
 };
 
 async function main() {
 
-  const allinks= await getJobsLinks();
+  const allinks = await getJobsLinks();
   //console.log(allinks);
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
-  
+
   const scrapedData = [];
   for (let l of allinks.hrefs) {
-    const data = await getJobDetails(l, page,allinks.startupLink);
+    const data = await getJobDetails(l, page, allinks.startupLink);
     scrapedData.push(data);
   }
   //console.log(scrapedData); 
