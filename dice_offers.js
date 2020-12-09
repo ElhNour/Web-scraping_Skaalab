@@ -1,0 +1,157 @@
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const readline = require('readline');
+var mysql = require('mysql');
+var con = mysql.createConnection({
+    database: "6A46Hgkjgu",
+    port: 3306,
+    host: "remotemysql.com",
+    user: "6A46Hgkjgu",
+    password: "JI4TSwVn7E"
+});
+
+
+(async () => {
+    try {
+        const browser = await puppeteer.launch({
+            args: ["--no-sandbox",
+                "--disable-setuid-sandbox",],
+        });
+        const page = await browser.newPage();
+
+        const links = readline.createInterface({
+            input: fs.createReadStream('links-dice.txt'),
+            output: process.stdout,
+            console: false
+        });
+        con.connect(function (err) {
+            if (err) throw err;
+            console.log("Connected!");
+        });
+        var idOffer = 1;
+        for await (const link of links) {
+            await page.goto(link, { timeout: 90000 });
+            try {
+                await page.waitForSelector('#jt');
+            }
+            catch{
+                console.log("[-]  offer not found");
+                continue;
+            }
+            position = await page.evaluate(() => document.querySelector('#jt').textContent);
+            startupName = await page.evaluate(() => document.querySelector('#hiringOrganizationName').textContent);
+            try {
+                startUpUrl = await page.evaluate(() => document.querySelector('#testing > div > div.col-md-5.col-lg-6 > ul > li.employer.hiringOrganization > a').getAttribute('href'));
+                await page2.goto('https://dice.com' + startUpUrl);
+                try {
+                    try {
+                        website = await page2.evaluate(() => document.querySelector('#company-jobs > div > div > div.col-md-4 > div:nth-child(1) > a:nth-child(2)').getAttribute('href'));
+                    } catch (error) {
+                        website = await page2.evaluate(() => document.querySelector('#company-jobs > div > div > div.col-md-4 > div:nth-child(2) > a:nth-child(2)').getAttribute('href'));
+                    }
+                } catch (error) {
+                    website = 'null';
+                }
+            } catch (error) {
+                website = 'null';
+            }
+            location = await page.evaluate(() => document.querySelector('#testing > div > div.col-md-5.col-lg-6 > ul > li.location > span').textContent);
+            const page2 = await browser.newPage()
+
+            await page2.close();
+            try {
+                skills = await page.evaluate(() => document.querySelector('#bd > div > div.col-md-8 > div:nth-child(9) > div > div.iconsiblings').textContent);
+                contract = await page.evaluate(() => document.querySelector('#bd > div > div.col-md-8 > div:nth-child(10) > div > div.iconsiblings > span').textContent);
+                salaire = await page.evaluate(() => document.querySelector('#bd > div > div.col-md-8 > div:nth-child(11) > div > div.iconsiblings > span.mL20').textContent);
+                description = await page.evaluate(() => {
+                    const ps = Array.from(document.querySelectorAll('#jobdescSec'))
+                    return ps.map(td => td.textContent)
+                });
+                try {
+                    if ((await page.evaluate(() =>
+                        document.querySelector('#bd > div > div.col-md-8 > div:nth-child(12) > div > div.iconsiblings > span.mL20').textContent
+                    )) == 'Work from home available' || (await page.evaluate(() =>
+                        document.querySelector('#bd > div > div.col-md-8 > div:nth-child(12) > div > div.iconsiblings > span.mL20').textContent
+                    )) == 'Travel not required') {
+                        var remote = "Remote";
+                    }
+                    else { var remote = location };
+                } catch (error) {
+                    if ((await page.evaluate(() =>
+                        document.querySelector('#bd > div > div.col-md-8 > div:nth-child(12) > div > div.iconsiblings > span:nth-child(1)').textContent
+                    )) == 'Work from home available' || (await page.evaluate(() =>
+                        document.querySelector('#bd > div > div.col-md-8 > div:nth-child(12) > div > div.iconsiblings > span:nth-child(2)').textContent
+                    )) == 'Travel not required') {
+                        var remote = "Remote";
+                    }
+                    else { var remote = location };
+
+                }
+            } catch (error) {
+                skills = await page.evaluate(() => document.querySelector('#bd > div:nth-child(2) > div.col-md-9 > div:nth-child(9) > div > div.iconsiblings').textContent);
+                contract = await page.evaluate(() => document.querySelector('#bd > div:nth-child(2) > div.col-md-9 > div:nth-child(10) > div > div.iconsiblings > span').textContent);
+                salaire = await page.evaluate(() => document.querySelector('#bd > div:nth-child(2) > div.col-md-9 > div:nth-child(11) > div > div.iconsiblings > span.mL20').textContent);
+                description = await page.evaluate(() => {
+                    const ps = Array.from(document.querySelectorAll('#jobdescSec p'))
+                    return ps.map(td => td.textContent)
+                });
+                try {
+                    if ((await page.evaluate(() =>
+                        document.querySelector('#bd > div:nth-child(2) > div.col-md-9 > div:nth-child(12) > div > div.iconsiblings > span.mL20').textContent
+                    )) == 'Work from home available' || (await page.evaluate(() =>
+                        document.querySelector('#bd > div:nth-child(2) > div.col-md-9 > div:nth-child(12) > div > div.iconsiblings > span.mL20').textContent
+                    )) == 'Travel not required') {
+                        var remote = "Remote";
+                    }
+                    else { var remote = location };
+                } catch (error) {
+                    if ((await page.evaluate(() =>
+                        document.querySelector('#bd > div:nth-child(2) > div.col-md-9 > div:nth-child(12) > div > div.iconsiblings > span:nth-child(1)').textContent
+                    )) == 'Work from home available' || (await page.evaluate(() =>
+                        document.querySelector('#bd > div:nth-child(2) > div.col-md-9 > div:nth-child(12) > div > div.iconsiblings > span:nth-child(2)').textContent
+                    )) == 'Travel not required') {
+                        var remote = "Remote";
+                    }
+                    else { var remote = location };
+                }
+
+            }
+            //console.log('[+] id : ' + idOffer);
+            //console.log('title : ' + position);
+            //console.log('startup :' + startupName.trim());
+            //console.log('website :' + website);
+            //console.log('location : ' + location);
+            //console.log('skills : ' + skills.trim());
+            //console.log('contract : ' + contract.trim());
+            //console.log('salaire : ' + salaire.trim());
+            //console.log('remote : ' + remote);
+            //console.log('description : ' + description.toString().trim());
+            //console.log('====================================');
+
+            if (website != "null") {
+                con.query("INSERT INTO startup (name, website, sourceID) VALUES (" + con.escape(startupName) + "," + con.escape(website.trim()) + ",1);", function (err, result) {
+                });
+            }
+            else {
+                con.query("INSERT INTO startup (name, sourceID) VALUES (" + con.escape(startupName.trim()) + ",1);", function (err, result) {
+                });
+            }
+
+            con.query("SELECT id FROM startup where name=" + con.escape(startupName) + ";", function (err, result) {
+                if (err) throw err;
+                idStartUp = JSON.parse(JSON.stringify(result))[0].id;
+                con.query("INSERT INTO offre (poste, contrat, salaire, travail, description, skills , startupID ) VALUES (" + con.escape(position.replace(/'/g, "\\'")) + "," + con.escape(contract.trim()) + "," + con.escape(salaire.trim()) + "," + con.escape(remote) + "," + con.escape(description.toString().trim().replace(/'/g, "\\'")) + "," + con.escape(skills.trim().replace(/'/g, "\\'")) + "," + idStartUp + ");", function (err, result) {
+                    if (err) throw err;
+                    console.log(idOffer + " offre inserted in database");
+                });
+            });
+
+            idOffer++;
+
+        }
+        await browser.close();
+    } catch (error) {
+        console.log(error);
+    }
+})
+    ();
