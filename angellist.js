@@ -1,3 +1,5 @@
+/** Avant de commencer il faut introduire l'adresse mail et le mot de passe à la ligne 417/419 */
+
 const fs = require('fs-extra');
 var mysql = require('mysql');
 const puppeteerExtra = require('puppeteer-extra');
@@ -192,7 +194,7 @@ async function getJobsLink(url, page) {
 
 };
 
-
+/** To write in data base : remove Idstartup from inputs */
 async function getOfferDetails(page, url, IdStartup) {
 
     await page.goto(url).catch(e => { });
@@ -201,7 +203,7 @@ async function getOfferDetails(page, url, IdStartup) {
     /** Get poste name */
     await page.waitForSelector('.styles_component__1kg4S.styles_header__3m1pY.__halo_fontSizeMap_size--2xl.__halo_fontWeight_medium');
     const Poste = await page.$eval('.styles_component__1kg4S.styles_header__3m1pY.__halo_fontSizeMap_size--2xl.__halo_fontWeight_medium', Poste => Poste.textContent);
-    /** Get Saliare value */
+    /** Get Salaire value */
     try {
         var Salaire = await page.$eval('.styles_subheader__-c7fc', Salaire => Salaire.textContent);
     }
@@ -224,6 +226,7 @@ async function getOfferDetails(page, url, IdStartup) {
             .map(element => element.innerText)
             .join('\n');
     });
+    /** Lors de l'utilisation de la BDD decommenter cette partie ***************  (BDD) */ 
   /*  Description = Description.replace(/'/gi, "''")
     Description = Description.replace(/"/gi, '')
     Description = Description.replace(/([\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]|[\u2708-\uFE0F])/g, '');*/
@@ -245,7 +248,7 @@ async function getOfferDetails(page, url, IdStartup) {
         Contrat: Contrat,
         Diplome: "",
         Experience: "",
-        IdStartup: IdStartup,
+        IdStartup: IdStartup, /** Lors de l'utilisation de la bdd enlever Id startup **************(BDD) */
 
     }
 
@@ -413,7 +416,7 @@ async function notVisited(){
         await page.click(USERNAME_SELECTOR);
         await page.$eval('#user_email', email => email.value = ''); // adresse mail
         await page.click(PASSWORD_SELECTOR);
-        await page.$eval('#user_password', password => password.value = '');// Mot de passe
+        await page.$eval('#user_password', password => password.value = ''); // Mot de passe
         await page.click(SUBMIT_SELECTOR);
         await page.waitForTimeout(20000);
         /**Dismiss */
@@ -465,7 +468,7 @@ async function notVisited(){
                 startupInfo.Startup = objects.Sname;
                 startupInfo.StartupLink = objects.link;
                 scrapedStartup.push(startupInfo);
-                /** Write stratups in csv fiel */
+                /** Write stratups in csv file ********(CSV FILE) */
                 var outputFile1 = './startups/batch-' + numberStartup + '.csv';
                 writeCSVStartup(scrapedStartup, outputFile1);
                 scrapedStartup = [];
@@ -474,6 +477,9 @@ async function notVisited(){
                     numberStartup++;
                     // scrapedStartup = [];
                 }
+                /** End of CSV FILE ************** (CSV FILE) */
+
+                /** Write stratups if not exist in data base ********** (BDD) */
 
                 /*  var startupInfo = [[objects.Sname, objects.link, 3]]
   
@@ -483,6 +489,7 @@ async function notVisited(){
                       return idstartup = response.insertId
                   })*/
 
+                /** To write in data base remove comments from this part */
 
 
                 for (let lien of objects.setLinks) { // visit offers from the same startup
@@ -501,22 +508,24 @@ async function notVisited(){
                     if (j % 5000 == 0) {
                         numberOffre++;
                         //scrapedData = [];
-                    } 
-                    /** sleep */
-                    var Middle1 = performance.now();
-                    if (((Middle1 - start) / 3600000) % 1 == 0) {
-                        waitForTimeout(600000);
                     }
-
-                   
+                    
+                     /** write offers in data base ******************* (BDD) */
                     /* var offre = [[data.Poste, data.Contrat, data.Salaire, data.Diplome, data.Experience, data.Travail, data.Description, idstartup, data.Skills]]
                      query = "insert into offre (poste,contrat,salaire,diplome,experience,travail,description,startupID,skills) Select '" + data.Poste + "','" + data.Contrat + "','" + data.Salaire + "','" + data.Diplome + "','" + data.Experience + "','" + data.Travail + "','" + data.Description + "'," + idstartup + ",'" + data.Skills + "' Where not exists(select * from offre where description  ='" + data.Description + "')"
                      con.query(query, (error, response) => {
                          console.log('OFFRE', error || response);
                      })*/
+                   /** End of writing offer in data base (to write in data base remove comments from this part)  */
 
-                     /** another sleep*/
+                    /** sleep 30 mnt after each 1H*/
+                    var Middle1 = performance.now();
+                    if (((Middle1 - start) / 3600000) % 1 == 0) {
+                        waitForTimeout(600000);
+                    }
 
+                  
+                     /** another sleep 1h after each 2H*/
                     var Middle2 = performance.now();
                     if (((Middle2 - start) / 3600000) % 2 == 0) {
                         waitForTimeout(1800000);
