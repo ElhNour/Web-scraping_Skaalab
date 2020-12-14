@@ -10,15 +10,37 @@ var con = mysql.createConnection({
     password: "JI4TSwVn7E"
 });
 
+async function getLinks(browser) {
+    const url = 'https://www.dice.com/jobs/q-Computer+science-jobs';
+    const page = await browser.newPage();
+    var logger = fs.createWriteStream("links-dice.txt", {
+        flags: 'a' // 'a' means appending (old data will be preserved)
+    });
+    for (var i = 1; i <= 1152; i++) {
+        try {
+            await page.goto(url + '?p=' + i.toString(), { waitUntil: 'networkidle0', timeout: 90000 });
+            await page.waitForXPath('//*[@id="position0"]');
+            for (var j = 0; j < 20; j++) {
+                try {
+                    const l = await page.evaluate("document.querySelector('#position" + j.toString() + "').getAttribute('href')");
+                    const link = "https://www.dice.com/" + l
+                    logger.write(link + '\r\n');
+                } catch (error) {
+                    continue;
+                }
+            };
+            console.log("link scrapping :"+(((20 * (i - 1)) + j) * 100 / 23050).toFixed(2).toString() + '%');
+        } catch (error) {
+            continue;
+        }
+    }
+    logger.end();
+    await browser.close();
+}
 
-(async () => {
+async function getOffers(browser) {
     try {
-        const browser = await puppeteer.launch({
-            args: ["--no-sandbox",
-                "--disable-setuid-sandbox",],
-        });
         const page = await browser.newPage();
-
         const links = readline.createInterface({
             input: fs.createReadStream('links-dice.txt'),
             output: process.stdout,
@@ -30,7 +52,7 @@ var con = mysql.createConnection({
         });
         var idOffer = 1;
         for await (const link of links) {
-            await page.goto(link, { timeout: 90000 });
+            await page.goto(link, { timeout: 120000 });
             try {
                 await page.waitForSelector('#jt');
             }
@@ -145,7 +167,6 @@ var con = mysql.createConnection({
                     console.log(idOffer + " offre inserted in database");
                 });
             });
-
             idOffer++;
 
         }
@@ -153,5 +174,17 @@ var con = mysql.createConnection({
     } catch (error) {
         console.log(error);
     }
-})
-    ();
+}
+
+(async function main() {
+    const browser = await puppeteer.launch({
+        args: ["--no-sandbox",
+            "--disable-setuid-sandbox", "--disable-blink-features"]
+    });
+    try {
+        //await getLinks(browser).then(() => getOffers(browser));
+        await getOffers(browser)
+    } catch (error) {
+        console.log(error);
+    }
+})();
