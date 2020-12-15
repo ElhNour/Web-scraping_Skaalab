@@ -10,6 +10,10 @@ var con = mysql.createConnection({
     password: "JI4TSwVn7E"
 });
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function getLinks(browser) {
     const url = 'https://www.dice.com/jobs/q-Computer+science-jobs';
     const page = await browser.newPage();
@@ -29,7 +33,7 @@ async function getLinks(browser) {
                     continue;
                 }
             };
-            console.log("link scrapping :"+(((20 * (i - 1)) + j) * 100 / 23050).toFixed(2).toString() + '%');
+            console.log("link scrapping :" + (((20 * (i - 1)) + j) * 100 / 23050).toFixed(2).toString() + '%');
         } catch (error) {
             continue;
         }
@@ -62,6 +66,7 @@ async function getOffers(browser) {
             }
             position = await page.evaluate(() => document.querySelector('#jt').textContent);
             startupName = await page.evaluate(() => document.querySelector('#hiringOrganizationName').textContent);
+            const page2 = await browser.newPage();
             try {
                 startUpUrl = await page.evaluate(() => document.querySelector('#testing > div > div.col-md-5.col-lg-6 > ul > li.employer.hiringOrganization > a').getAttribute('href'));
                 await page2.goto('https://dice.com' + startUpUrl);
@@ -72,14 +77,14 @@ async function getOffers(browser) {
                         website = await page2.evaluate(() => document.querySelector('#company-jobs > div > div > div.col-md-4 > div:nth-child(2) > a:nth-child(2)').getAttribute('href'));
                     }
                 } catch (error) {
+                    console.log(error);
                     website = 'null';
                 }
             } catch (error) {
+                console.log(error);
                 website = 'null';
             }
             location = await page.evaluate(() => document.querySelector('#testing > div > div.col-md-5.col-lg-6 > ul > li.location > span').textContent);
-            const page2 = await browser.newPage()
-
             await page2.close();
             try {
                 skills = await page.evaluate(() => document.querySelector('#bd > div > div.col-md-8 > div:nth-child(9) > div > div.iconsiblings').textContent);
@@ -104,9 +109,9 @@ async function getOffers(browser) {
                     )) == 'Work from home available' || (await page.evaluate(() =>
                         document.querySelector('#bd > div > div.col-md-8 > div:nth-child(12) > div > div.iconsiblings > span:nth-child(2)').textContent
                     )) == 'Travel not required') {
-                        var remote = "Remote";
+                        remote = "Remote";
                     }
-                    else { var remote = location };
+                    else { remote = location };
 
                 }
             } catch (error) {
@@ -158,7 +163,7 @@ async function getOffers(browser) {
                 con.query("INSERT INTO startup (name, sourceID) VALUES (" + con.escape(startupName.trim()) + ",1);", function (err, result) {
                 });
             }
-
+            
             con.query("SELECT id FROM startup where name=" + con.escape(startupName) + ";", function (err, result) {
                 if (err) throw err;
                 idStartUp = JSON.parse(JSON.stringify(result))[0].id;
