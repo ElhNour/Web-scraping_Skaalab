@@ -25,43 +25,48 @@ function sleep(ms) {
         console.log("Connected!");
     });
     await page.goto('https://weworkremotely.com/categories/remote-programming-jobs#job-listings' + i, { timeout: 90000 });
-    for (var i = 44; i <= 341; i++) {
+    for (var i = 2; i <= 500; i++) {
         try {
-            var startupUrl = null;
+            var startupUrl;
             const link = await page.evaluate("document.querySelector('#category-2 > article > ul > li:nth-child(" + i + ") > a').getAttribute('href')");
             const offerPage = await browser.newPage();
             await offerPage.goto(baseUrl + link, { timeout: 90000 });
             const position = await offerPage.evaluate(() => document.querySelector('body > div.content > div > div.listing-header-container > h1').textContent);
             const startupName = await offerPage.evaluate(() => document.querySelector('body > div.content > div > div.company-card > h2 > a').textContent);
             try {
-                startupUrl = await offerPage.evaluate(() => document.querySelector('body > div.content > div > div.company-card > h3:nth-child(4) > a').getAttribute('href'));   
+                startupUrl = await offerPage.evaluate(() => document.querySelector('body > div.content > div > div.company-card > h3:nth-child(4) > a').getAttribute('href'));
             } catch (error) {
-                startupUrl = null;
             }
             const description = await offerPage.evaluate(() => document.querySelector("#job-listing-show-container").textContent);
-            console.log('id : ' + (i-2));
+            console.log('id : ' + (i - 2));
             console.log('position : ' + position.trim());
             console.log('startup : ' + startupName.trim());
             console.log('StartupUrl : ' + startupUrl);
             console.log('description : ' + description);
             console.log('=================================================');
             await offerPage.close();
-            con.query("SELECT id FROM startup where name=" + con.escape(startupName.trim()) + ";", function (err, result) {
+            await sleep(1000)
+            con.query("SELECT idstartup FROM startup where name=" + con.escape(startupName.trim()) + ";", function (err, result) {
+                if (err) throw err;
                 try {
-                    idStartUp = JSON.parse(JSON.stringify(result))[0].id;
+                    idStartUp = JSON.parse(JSON.stringify(result))[0].idstartup;
                 } catch (error) {
-                    if (startupUrl != null) {
-                        con.query("INSERT INTO startup (name, website, sourceID) VALUES (" + con.escape(startupName.trim()) + "," + con.escape(startupUrl) + ",3);", function (err, result) {
+                    if (startupUrl != undefined) {
+                        con.query("INSERT IGNORE INTO startup (name, website, sourceID) VALUES (" + con.escape(startupName.trim()) + "," + con.escape(startupUrl) + ",6);", function (err, result) {
+                            if (err) console.log(err);
                         })
                     }
                     else {
-                        con.query("INSERT INTO startup (name, sourceID) VALUES (" + con.escape(startupName.trim()) + ",3);", function (err, result) {
+                        con.query("INSERT IGNORE INTO startup (name, sourceID) VALUES (" + con.escape(startupName.trim()) + ",6);", function (err, result) {
+                            if (err) console.log(err);
                         })
                     }
                 } finally {
-                    con.query("SELECT id FROM startup where name=" + con.escape(startupName.trim()) + ";", function (err, result) {
-                        idStartUp = JSON.parse(JSON.stringify(result))[0].id;
-                        con.query("INSERT INTO offre (poste, travail, description , startupID ) VALUES (" + con.escape(position.trim()) + ",'Remote'," + con.escape(description.trim()) + "," + idStartUp + ");", function (err, result) {  
+                    con.query("SELECT idstartup FROM startup where name=" + con.escape(startupName.trim()) + ";", function (err, result) {
+                        if (err) throw err;
+                        idStartUp = JSON.parse(JSON.stringify(result))[0].idstartup;
+                        con.query("INSERT INTO offre (poste, travail, description , startupID ) VALUES (" + con.escape(position.trim()) + ",'Remote'," + con.escape(description.trim()) + "," + idStartUp + ");", function (err, result) {
+                            if (err) console.log(err);
                         })
                     })
                 }

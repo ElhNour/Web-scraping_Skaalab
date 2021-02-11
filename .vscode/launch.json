@@ -11,7 +11,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/weWorkRemotely.js",
+            "program": "${workspaceFolder}/dice.js",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ]

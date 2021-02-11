@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 var mysql = require('mysql');
-const baseUrl = 'https://uncubed.com';
+const baseUrl = 'https://uncubed.com/jobs?page=';
 var con = mysql.createConnection({
     database: "6A46Hgkjgu",
     port: 3306,
@@ -24,9 +24,12 @@ function sleep(ms) {
         console.log("Connected!");
     });
 
-    for (var i = 14; i <= 1188; i++) {
+    await page.goto(baseUrl , { waitUntil: 'networkidle0', timeout: 90000 });
+    const maxP = await page.evaluate("document.querySelector('body > div.page-content.uc-padding > div > div.fifty-padding > div > div > div.col-sm-5 > div.pagination-container > nav > span.last > a').getAttribute('href')");
+    console.log('got max pages : ',maxP.substr(maxP.length -4));
+    for (var i = 1; i <= maxP.substr(maxP.length -4); i++) {
         try {
-            await page.goto('https://uncubed.com/jobs?page=' + i, { timeout: 90000 });
+            await page.goto(baseUrl + i, { timeout: 90000 });
             for (var j = 4; j <= 23; j++) {
                 try {
                     await page.click('body > div.page-content > div > div.fifty-padding > div > div > div.col-sm-5 > div.jobs-listings > div:nth-child(' + j + ')');
@@ -61,22 +64,21 @@ function sleep(ms) {
                     //console.log('description : ' + description.substring(20, description.length - 17).trim());
                     //console.log('=================================================');
 
-                    con.query("SELECT id FROM startup where name=" + con.escape(startupName.split('-', 1).toString().trim()) + ";", function (err, result) {
+                    con.query("SELECT idstartup FROM startup where name=" + con.escape(startupName.split('-', 1).toString().trim()) + ";", function (err, result) {
                         try {
-                            idStartUp = JSON.parse(JSON.stringify(result))[0].id;
+                            idStartUp = JSON.parse(JSON.stringify(result))[0].idstartup;
                         } catch (error) {
                             if (startupUrl != null) {
-                                con.query("INSERT INTO startup (name, website, sourceID) VALUES (" + con.escape(startupName.split('-', 1).toString().trim()) + "," + con.escape(startupUrl) + ",2);", function (err, result) {
+                                con.query("INSERT IGNORE INTO startup (name, website, sourceID) VALUES (" + con.escape(startupName.split('-', 1).toString().trim()) + "," + con.escape(startupUrl) + ",5);", function (err, result) {
                                 })
                             }
                             else {
-                                con.query("INSERT INTO startup (name, sourceID) VALUES (" + con.escape(startupName.split('-', 1).toString().trim()) + ",2);", function (err, result) {
+                                con.query("INSERT IGNORE INTO startup (name, sourceID) VALUES (" + con.escape(startupName.split('-', 1).toString().trim()) + ",5);", function (err, result) {
                                 })
                             }
                         } finally {
-                            con.query("SELECT id FROM startup where name=" + con.escape(startupName.split('-', 1).toString().trim()) + ";", function (err, result) {
-                                if (err) throw err;
-                                idStartUp = JSON.parse(JSON.stringify(result))[0].id;
+                            con.query("SELECT idstartup FROM startup where name=" + con.escape(startupName.split('-', 1).toString().trim()) + ";", function (err, result) {
+                                idStartUp = JSON.parse(JSON.stringify(result))[0].idstartup;
                                 con.query("INSERT INTO offre (poste, travail, description , startupID ) VALUES (" + con.escape(position.trim()) + "," + con.escape(remote.substr(2).trim()) + "," + con.escape(description.substring(20, description.length - 17).trim()) + "," + idStartUp + ");", function (err, result) {
                                     console.log(id + " offre inserted in database");
                                 })
